@@ -1,11 +1,11 @@
 #pragma once
 
-#include <Servo.h>
-
+#include <Adafruit_PWMServoDriver.h>
 class Ear
 {
 private:
-    Servo servo;
+    Adafruit_PWMServoDriver *driver;
+    uint8_t driverPosition;
 public:
-    Ear(int pin);
+    Ear(Adafruit_PWMServoDriver *driver, uint8_t driverPosition);
 };

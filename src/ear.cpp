@@ -1,8 +1,7 @@
 #include "ear.h"
 
-Ear::Ear(int pin)
+Ear::Ear(Adafruit_PWMServoDriver *driver, uint8_t driverPosition)
 {
-    this->servo.attach(pin);
-
-    this->servo.writeMicroseconds(1500);
+    this->driver = driver;
+    this->driverPosition = driverPosition;
 }

@@ -1,22 +1,69 @@
+#include "settings.h"
+
+#include <Adafruit_PWMServoDriver.h>
+#include <ArduinoLog.h>
+
 #include "eye.h"
 
-Eye::Eye(int pitchPin, int yawPin, int upperLidPin, int lowerLidPin)
+Eye::Eye(Adafruit_PWMServoDriver *driver,
+         uint8_t pitchDriverPosition,
+         uint8_t yawPosition,
+         uint8_t upperLidPosition,
+         uint8_t lowerLidPosition)
 {
-    this->lowerLid.attach(lowerLidPin);
-    this->pitch.attach(pitchPin);
-    this->upperLid.attach(upperLidPin);
-    this->yaw.attach(yawPin);
+    this->driver = driver;
 
-    this->lowerLid.writeMicroseconds(1500);
-    this->pitch.writeMicroseconds(1500);
-    this->upperLid.writeMicroseconds(1500);
-    this->yaw.writeMicroseconds(1500);
+    this->currentLowerLid = 1500;
+    this->currentPitch = 1500;
+    this->currentUpperLid = 1500;
+    this->currentYaw = 1500;
+
+    this->pitchDriverPosition = pitchDriverPosition;
+    this->yawDriverPosition = yawDriverPosition;
+    this->upperDriverLidPosition = upperDriverLidPosition;
+    this->lowerDriverLidPosition = lowerDriverLidPosition;
+
+    this->driver->writeMicroseconds(this->pitchDriverPosition, this->currentPitch);
+    this->driver->writeMicroseconds(this->yawDriverPosition, this->currentYaw);
+    this->driver->writeMicroseconds(this->upperDriverLidPosition, this->currentUpperLid);
+    this->driver->writeMicroseconds(this->lowerDriverLidPosition, this->currentLowerLid);
 
     this->isMoving = false;
 }
 
-void Eye::closeEyes()
+bool Eye::closeEyes()
 {
+    Log.verboseln("\"Eye::closeEyes()\"");
+
+    if (this->isMoving)
+    {
+        Log.traceln("%s is still moving. The current upper lid position is %d and the current lower lid position is %d", 
+            this->name.c_str(), 
+            this->currentUpperLid,
+            this->currentLowerLid);
+        this->currentUpperLid += 50;
+        this->currentLowerLid += 50;
+        this->driver->writeMicroseconds(this->upperDriverLidPosition, this->currentUpperLid);
+        this->driver->writeMicroseconds(this->lowerDriverLidPosition, this->currentLowerLid);
+    }
+    else
+    {
+        Log.infoln("%s is starting closing eyes. The upper current position is %d and the current lower position is %d", 
+            this->name.c_str(),
+            this->currentUpperLid,
+            this->currentLowerLid);
+        this->isMoving = true;
+    }
+
+    if (this->currentUpperLid >= 2000)
+    {
+        Log.infoln("%s has moved to its end position for closing eyes",
+            this->name.c_str());
+
+        this->isMoving = false;
+    }
+
+    return this->isMoving;
 }
 
 void Eye::lookDown()
@@ -49,6 +96,6 @@ void Eye::lookUp()
 {
 }
 
-void Eye::openEyes()
+bool Eye::openEyes()
 {
 }

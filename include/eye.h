@@ -1,17 +1,27 @@
 #pragma once
 
-#include <Servo.h>
-
 #include "mover.h"
 
 class Eye: public Mover
 {
 private:
-    Servo pitch, yaw, upperLid, lowerLid;
-    int currentPitch, currentYaw, currentUpperLid, currentLowerLid;
-    
+    Adafruit_PWMServoDriver *driver;
+    uint8_t pitchDriverPosition, 
+        yawDriverPosition, 
+        upperDriverLidPosition, 
+        lowerDriverLidPosition;
+    uint16_t currentPitch, 
+        currentYaw,
+        currentUpperLid,
+        currentLowerLid;
 public:
-    Eye(int pitchPin, int yawPin, int upperLidPin, int lowerLidPin);
+    Eye(Adafruit_PWMServoDriver *driver,
+        uint8_t pitchDriverPosition, 
+        uint8_t yawDriverPosition, 
+        uint8_t upperDriverLidPosition, 
+        uint8_t lowerDriverLidPosition);
+
+    String name = "Eye";
 
     bool lookLeft();
     bool lookRight();
@@ -19,6 +29,6 @@ public:
     void lookUp();
     void lookDown();
 
-    void closeEyes();
-    void openEyes();
+    bool closeEyes();
+    bool openEyes();
 };
