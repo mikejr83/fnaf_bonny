@@ -11,6 +11,7 @@
 
 #include "face.h"
 
+
 Face *face;
 Thread *faceThread;
 ThreadController *threadController;
@@ -33,6 +34,8 @@ void setup()
   faceThread = new Thread(faceThreadCallback);
   faceThread->enabled = true;
   faceThread->setInterval(THREAD_INTERVAL);
+
+  delay(500);
 }
 
 // You can use this function if you'd like to set the pulse length in seconds

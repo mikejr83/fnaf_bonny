@@ -6,11 +6,8 @@
 #include "eye.h"
 #include "face.h"
 
-Face::Face()
+Face::Face() : driver(new Adafruit_PWMServoDriver())
 {
-    // called this way, it uses the default address 0x40
-    this->driver = new Adafruit_PWMServoDriver();
-
     this->driver->begin();
     /*
      * In theory the internal oscillator (clock) is 25MHz but it really isn't
@@ -42,29 +39,58 @@ Face::Face()
 
 bool Face::update()
 {
-    Log.verboseln("Face::update()");
+    Log.verboseln("Face::update() - Current state: %d", this->currentState);
     switch (this->currentState)
     {
+    /*
+     * CASE 0
+     * Starting blinking. This state is the progress of closing the eyes.
+     */
     case 0:
-        /* Blink */
-        Log.traceln("In blinking state");
-        bool result1 = this->leftEye->closeEyes();
-        bool result2 = this->rightEye->closeEyes();
+    {
+        Log.traceln("In blinking state - closing");
+        bool leftEyeClosedResult = this->leftEye->closeEyes();
+        bool rightEyeClosedResult = this->rightEye->closeEyes();
 
-        Log.traceln("Left eye result: %T - Right eye result: %T", result1, result2);
+        Log.traceln("Left eye result: %T - Right eye result: %T", leftEyeClosedResult, rightEyeClosedResult);
 
-        bool done = !result1 & !result2;
+        bool closed = !leftEyeClosedResult && !rightEyeClosedResult;
 
-        if (done) {
-            Log.infoln("Blinking state completed");
-            this->currentState++;
+        if (closed)
+        {
+            Log.infoln("Close eye state completed for blinking");
+            // move the the open state
+            this->currentState = 1;
         }
 
         break;
-    
-    default:
-        Log.warningln("The current state \"%d\" is not defined in the state machine", currentState);
+    }
+    /*
+     * Ending blinking. This state is the progress of opening the eyes.
+     */
+    case 1:
+    {
+        Log.traceln("In blinking state - opening");
+        bool leftEyeOpenedResult = this->leftEye->openEyes();
+        bool rightEyeOpenedResult = this->rightEye->openEyes();
+
+        Log.traceln("Left eye result: %T - Right eye result: %T", leftEyeOpenedResult, rightEyeOpenedResult);
+
+        bool opened = !leftEyeOpenedResult && !rightEyeOpenedResult;
+
+        if (opened)
+        {
+            Log.infoln("Open eye state completed for blinking");
+            // move the the open state
+            this->currentState = 2;
+        }
         break;
+    }
+    default:
+    {
+        Log.warningln("No handler for the state %d", this->currentState);
+        break;
+    }
     }
 
     return false;
