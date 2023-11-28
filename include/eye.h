@@ -13,6 +13,8 @@ private:
         currentYaw,
         currentUpperLid,
         currentLowerLid;
+protected:
+
 public:
     Eye(Adafruit_PWMServoDriver *driver,
         uint8_t pitchDriverPosition, 

@@ -2,7 +2,7 @@
 
 #include <ArduinoLog.h>
 
-#define THREAD_INTERVAL 500
+#define THREAD_INTERVAL 1000
 
 #define OSCILLATOR_FREQUENCY 25200000
 #define SERVOMIN 296  // This is the 'minimum' pulse length count (out of 4096)
@@ -12,4 +12,5 @@
 #define SERVO_FREQ 90 // Analog servos run at ~50 Hz updates
 
 #define LOG_LEVEL LOG_LEVEL_TRACE
+// #define LOG_LEVEL LOG_LEVEL_VERBOSE
 // #define DISABLE_LOGGING 

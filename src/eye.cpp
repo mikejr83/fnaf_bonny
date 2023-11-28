@@ -9,15 +9,25 @@ Eye::Eye(Adafruit_PWMServoDriver *driver,
          uint8_t pitchDriverPosition,
          uint8_t yawDriverPosition,
          uint8_t upperDriverLidPosition,
-         uint8_t lowerDriverLidPosition) : Mover(driver),
+         uint8_t lowerDriverLidPosition) : Mover(driver, 50),
                                            pitchDriverPosition(pitchDriverPosition),
                                            yawDriverPosition(upperDriverLidPosition),
                                            upperDriverLidPosition(pitchDriverPosition),
                                            lowerDriverLidPosition(lowerDriverLidPosition),
+
                                            currentPitch(1500),
                                            currentYaw(1500),
                                            currentUpperLid(1500),
-                                           currentLowerLid(1500)
+                                           currentLowerLid(1500),
+
+                                           upperLidClosedPosition(2200),
+                                           upperLidOpenPosition(1000),
+                                           lowerLidClosedPosition(2200),
+                                           lowerLidOpenPosition(1000),
+                                           leftEndPosition(2000),
+                                           rightEndPosition(800),
+                                           upEndPosition(2000),
+                                           downEndPosition(1000)
 {
     this->driver->writeMicroseconds(this->pitchDriverPosition, this->currentPitch);
     this->driver->writeMicroseconds(this->yawDriverPosition, this->currentYaw);
@@ -28,54 +38,24 @@ Eye::Eye(Adafruit_PWMServoDriver *driver,
 bool Eye::closeEyes()
 {
     Log.verboseln("\"Eye::closeEyes()\"");
-    uint8_t stepSize = 100;
-    bool moveUpper = true,
-         moveLower = true;
 
-    this->moveTo(this->lowerDriverLidPosition, this->lowerLidClosedPosition);
-    this->moveTo(this->upperDriverLidPosition, this->upperLidClosedPosition);
+    bool lowerIsAtClosedPosition =
+        this->moveTo(this->lowerDriverLidPosition, this->lowerLidClosedPosition);
+    bool upperIsAtClosedPosition =
+        this->moveTo(this->upperDriverLidPosition, this->upperLidClosedPosition);
 
-    if (this->currentUpperLid >= this->upperLidClosedPosition)
+    if (lowerIsAtClosedPosition)
     {
-        Log.infoln("%s has moved to its end position for closing eyes",
+        Log.infoln("%s lower lid has moved to its end position for closing eyes",
                    this->name.c_str());
-        moveUpper = false;
     }
-    if (this->currentLowerLid >= this->lowerLidClosedPosition)
+    if (upperIsAtClosedPosition)
     {
-        Log.infoln("%s has moved to its end position for closing eyes",
+        Log.infoln("%s upper lid has moved to its end position for closing eyes",
                    this->name.c_str());
-
-        moveUpper = false;
     }
 
-    if (this->isMoving)
-    {
-        Log.traceln("%s is still moving. The current upper lid position is %d and the current lower lid position is %d",
-                    this->name.c_str(),
-                    this->currentUpperLid,
-                    this->currentLowerLid);
-        if (moveLower)
-        {
-            this->currentLowerLid += stepSize;
-            this->driver->writeMicroseconds(this->lowerDriverLidPosition, this->currentLowerLid);
-        }
-        if (moveUpper)
-        {
-            this->currentUpperLid += stepSize;
-            this->driver->writeMicroseconds(this->upperDriverLidPosition, this->currentUpperLid);
-        }
-    }
-    else
-    {
-        Log.infoln("%s is starting closing eyes. The upper current position is %d and the current lower position is %d",
-                   this->name.c_str(),
-                   this->currentUpperLid,
-                   this->currentLowerLid);
-        this->isMoving = true;
-    }
-
-    this->isMoving = moveUpper && moveLower;
+    this->isMoving = !lowerIsAtClosedPosition && !upperIsAtClosedPosition;
 
     return this->isMoving;
 }
@@ -114,56 +94,23 @@ bool Eye::openEyes()
 {
     Log.verboseln("\"Eye::closeEyes()\"");
 
-    this->moveTo(this->lowerDriverLidPosition, this->lowerLidClosedPosition);
-    this->moveTo(this->upperDriverLidPosition, this->upperLidClosedPosition);
+    bool lowerIsAtOpenPosition =
+        this->moveTo(this->lowerDriverLidPosition, this->lowerLidOpenPosition);
+    bool upperIsAtOpenPosition =
+        this->moveTo(this->upperDriverLidPosition, this->upperLidOpenPosition);
 
-    uint8_t stepSize = 100;
-    bool moveUpper = true,
-         moveLower = true;
-
-    if (this->currentUpperLid <= this->upperLidOpenPosition)
+    if (lowerIsAtOpenPosition)
     {
-        Log.infoln("%s has moved to its end position for closing eyes",
+        Log.infoln("%s lower lid has moved to its end position for opening eyes",
                    this->name.c_str());
-
-        moveUpper = false;
     }
-    if (this->currentLowerLid <= this->lowerLidOpenPosition)
+    if (upperIsAtOpenPosition)
     {
-        Log.infoln("%s has moved to its end position for closing eyes",
+        Log.infoln("%s upper lid has moved to its end position for opening eyes",
                    this->name.c_str());
-
-        moveUpper = false;
     }
 
-    if (this->isMoving)
-    {
-        Log.traceln("%s is still moving. The current upper lid position is %d and the current lower lid position is %d",
-                    this->name.c_str(),
-                    this->currentUpperLid,
-                    this->currentLowerLid);
-        if (moveLower)
-        {
-            this->currentLowerLid -= stepSize;
-            // this->moveTo(this->lowerDriverLidPosition, this->lowerLidOpenPosition);
-            this->driver->writeMicroseconds(this->lowerDriverLidPosition, this->currentLowerLid);
-        }
-        if (moveUpper)
-        {
-            this->currentUpperLid -= stepSize;
-            this->driver->writeMicroseconds(this->upperDriverLidPosition, this->currentUpperLid);
-        }
-    }
-    else
-    {
-        Log.infoln("%s is starting closing eyes. The upper current position is %d and the current lower position is %d",
-                   this->name.c_str(),
-                   this->currentUpperLid,
-                   this->currentLowerLid);
-        this->isMoving = true;
-    }
-
-    this->isMoving = moveUpper && moveLower;
+    this->isMoving = !lowerIsAtOpenPosition && !upperIsAtOpenPosition;
 
     return this->isMoving;
 }

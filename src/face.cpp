@@ -6,7 +6,7 @@
 #include "eye.h"
 #include "face.h"
 
-Face::Face() : driver(new Adafruit_PWMServoDriver())
+Face::Face() : driver(new Adafruit_PWMServoDriver()), currentState(0)
 {
     this->driver->begin();
     /*
@@ -91,7 +91,7 @@ bool Face::update()
         Log.warningln("No handler for the state %d", this->currentState);
         break;
     }
-    }
+    } // end-switch
 
     return false;
 }
