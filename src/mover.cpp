@@ -18,14 +18,13 @@ bool Mover::moveTo(uint8_t dirverPosition, uint16_t stopPosition)
 {
     Log.verboseln("Eye::moveTo()");
 
-    uint16_t currentPosition = this->driver->getPWM(dirverPosition, false);
-    uint16_t other = this->driver->getPWM(dirverPosition,true);
+    uint16_t currentPWM = this->driver->getPWM(dirverPosition, true);
+    long currentPosition = map(currentPWM, SERVOMIN, SERVOMAX, USMIN, USMAX);
 
-    Log.traceln("The current position of the servo at pin %d is %d and is moving to %d - other %d",
+    Log.traceln("The current position of the servo at pin %d is %d and is moving to %d",
                   dirverPosition,
                   currentPosition,
-                  stopPosition,
-                  other);
+                  stopPosition);
 
     
 
