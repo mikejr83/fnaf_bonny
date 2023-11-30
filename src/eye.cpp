@@ -1,89 +1,125 @@
 #include "settings.h"
 
-#include <Adafruit_PWMServoDriver.h>
-#include <ArduinoLog.h>
+#include <ServoEasing.h>
 
 #include "eye.h"
+#include "mover.h"
 
-Eye::Eye(Adafruit_PWMServoDriver *driver,
-         uint8_t pitchDriverPosition,
-         uint8_t yawDriverPosition,
-         uint8_t upperDriverLidPosition,
-         uint8_t lowerDriverLidPosition) : Mover(driver, 50),
-                                           pitchDriverPosition(pitchDriverPosition),
-                                           yawDriverPosition(upperDriverLidPosition),
-                                           upperDriverLidPosition(pitchDriverPosition),
-                                           lowerDriverLidPosition(lowerDriverLidPosition),
+#ifndef EYE_EASING_TYPE
+#define EYE_EASING_TYPE EASE_CUBIC_OUT
+#endif
 
-                                           currentPitch(1500),
-                                           currentYaw(1500),
-                                           currentUpperLid(1500),
-                                           currentLowerLid(1500),
+Eye::Eye(String name,
+         int pitchPin,
+         int yawPin,
+         int upperPin,
+         int lowerPin) : Mover(name),
 
-                                           upperLidClosedPosition(2200),
-                                           upperLidOpenPosition(1000),
-                                           lowerLidClosedPosition(2200),
-                                           lowerLidOpenPosition(1000),
-                                           leftEndPosition(2000),
-                                           rightEndPosition(800),
-                                           upEndPosition(2000),
-                                           downEndPosition(1000)
+                         pitchPin(pitchPin),
+                         yawPin(yawPin),
+                         upperPin(upperPin),
+                         lowerPin(lowerPin),
+
+                         currentPitch(1500),
+                         currentYaw(1500),
+                         currentUpperLid(1500),
+                         currentLowerLid(1500),
+
+                         upperLidClosedPosition(2200),
+                         upperLidOpenPosition(800),
+                         lowerLidClosedPosition(2200),
+                         lowerLidOpenPosition(800),
+                         leftEndPosition(2000),
+                         rightEndPosition(800),
+                         upEndPosition(2000),
+                         downEndPosition(1000)
 {
-    this->driver->writeMicroseconds(this->pitchDriverPosition, this->currentPitch);
-    this->driver->writeMicroseconds(this->yawDriverPosition, this->currentYaw);
-    this->driver->writeMicroseconds(this->upperDriverLidPosition, this->currentUpperLid);
-    this->driver->writeMicroseconds(this->lowerDriverLidPosition, this->currentLowerLid);
+    this->pitchServo = new ServoEasing(PCA9685_DEFAULT_ADDRESS);
+    this->yawServo = new ServoEasing(PCA9685_DEFAULT_ADDRESS);
+    this->upperServo = new ServoEasing(PCA9685_DEFAULT_ADDRESS);
+    this->lowerServo = new ServoEasing(PCA9685_DEFAULT_ADDRESS);
+
+    this->pitchServo->setSpeed(80);
+    this->yawServo->setSpeed(80);
+    this->upperServo->setSpeed(80);
+    this->lowerServo->setSpeed(80);
+
+    this->pitchServo->setMaxConstraint(2200);
+    this->yawServo->setMaxConstraint(2200);
+    this->upperServo->setMaxConstraint(2200);
+    this->lowerServo->setMaxConstraint(2200);
+
+    this->pitchServo->setMinConstraint(800);
+    this->yawServo->setMinConstraint(800);
+    this->upperServo->setMinConstraint(800);
+    this->lowerServo->setMinConstraint(800);
+
+    this->pitchServo->setEasingType(EYE_EASING_TYPE);
+    this->yawServo->setEasingType(EYE_EASING_TYPE);
+    this->upperServo->setEasingType(EYE_EASING_TYPE);
+    this->lowerServo->setEasingType(EYE_EASING_TYPE);
+
+    if (this->pitchServo->InitializeAndCheckI2CConnection(&Serial))
+    {
+        Log.error("Cannot communicate withthe PCA9685 board!");
+    }
+    else
+    {
+        Log.verboseln("Driver is initialized on I2C.");
+    }
+
+    this->pitchServo->attach(this->pitchPin, this->currentPitch);
+    this->yawServo->attach(this->yawPin, this->currentYaw);
+    this->upperServo->attach(this->upperPin, this->currentUpperLid);
+    this->lowerServo->attach(this->lowerPin, this->currentLowerLid);
+
+    updateAndWaitForAllServosToStop();
 }
 
 bool Eye::closeEyes()
 {
     Log.verboseln("\"Eye::closeEyes()\"");
 
-    bool lowerIsAtClosedPosition =
-        this->moveTo(this->lowerDriverLidPosition, this->lowerLidClosedPosition);
-    bool upperIsAtClosedPosition =
-        this->moveTo(this->upperDriverLidPosition, this->upperLidClosedPosition);
+    this->lowerServo->startEaseTo(this->lowerLidClosedPosition, 50);
+    this->upperServo->startEaseTo(this->upperLidClosedPosition, 50);
 
-    if (lowerIsAtClosedPosition)
-    {
-        Log.infoln("%s lower lid has moved to its end position for closing eyes",
-                   this->name.c_str());
-    }
-    if (upperIsAtClosedPosition)
-    {
-        Log.infoln("%s upper lid has moved to its end position for closing eyes",
-                   this->name.c_str());
-    }
-
-    this->isMoving = !lowerIsAtClosedPosition && !upperIsAtClosedPosition;
-
-    return this->isMoving;
+    return !(this->lowerServo->update() && this->upperServo->update());
 }
 
 void Eye::lookDown()
 {
-    if (this->isMoving)
-    {
-    }
-
-    this->isMoving = true;
 }
 
 bool Eye::lookLeft()
 {
-    if (this->isMoving)
-    {
-        return false;
-    }
+    Log.verboseln("%s - \"Eye::lookLeft()\"", this->name.c_str());
 
-    this->isMoving = true;
+    this->yawServo->startEaseTo(2000, 50);
+    bool leftCompleted = !this->yawServo->update();
 
-    return this->isMoving;
+    Log.traceln("%s - Is moving %T - !update %T - current %d going to 2000", 
+        this->name.c_str(), 
+        this->yawServo->isMoving(), 
+        leftCompleted,
+        this->yawServo->getCurrentMicroseconds());
+
+    return leftCompleted;
 }
 
 bool Eye::lookRight()
 {
-    return false;
+    Log.verboseln("%s - \"Eye::lookRight()\"", this->name.c_str());
+
+    this->yawServo->startEaseTo(1000, 50);
+
+    Log.traceln("%s - Is moving %T", this->name.c_str(), this->yawServo->isMoving());
+
+    // bool same = this->lowerServo->getCurrentMicroseconds() == this->lowerLidOpenPosition &&
+    //             this->upperServo->getCurrentMicroseconds() == this->upperLidOpenPosition;
+
+    // Log.traceln("%s - Upper: %d - Lower: %d - Are same? %T", this->name.c_str(), this->lowerServo->getCurrentMicroseconds(), this->upperServo->getCurrentMicroseconds(), same);
+
+    return !(this->yawServo->update());
 }
 
 void Eye::lookUp()
@@ -92,25 +128,17 @@ void Eye::lookUp()
 
 bool Eye::openEyes()
 {
-    Log.verboseln("\"Eye::closeEyes()\"");
+    Log.verboseln("%s - \"Eye::openEyes()\"", this->name.c_str());
 
-    bool lowerIsAtOpenPosition =
-        this->moveTo(this->lowerDriverLidPosition, this->lowerLidOpenPosition);
-    bool upperIsAtOpenPosition =
-        this->moveTo(this->upperDriverLidPosition, this->upperLidOpenPosition);
+    this->lowerServo->startEaseTo(this->lowerLidOpenPosition);
+    this->upperServo->startEaseTo(this->upperLidOpenPosition);
 
-    if (lowerIsAtOpenPosition)
-    {
-        Log.infoln("%s lower lid has moved to its end position for opening eyes",
-                   this->name.c_str());
-    }
-    if (upperIsAtOpenPosition)
-    {
-        Log.infoln("%s upper lid has moved to its end position for opening eyes",
-                   this->name.c_str());
-    }
+    Log.traceln("%s - Is moving %T", this->name.c_str(), this->lowerServo->isMoving());
 
-    this->isMoving = !lowerIsAtOpenPosition && !upperIsAtOpenPosition;
+    // bool same = this->lowerServo->getCurrentMicroseconds() == this->lowerLidOpenPosition &&
+    //             this->upperServo->getCurrentMicroseconds() == this->upperLidOpenPosition;
 
-    return this->isMoving;
+    // Log.traceln("%s - Upper: %d - Lower: %d - Are same? %T", this->name.c_str(), this->lowerServo->getCurrentMicroseconds(), this->upperServo->getCurrentMicroseconds(), same);
+
+    return !(this->lowerServo->update() && this->upperServo->update());
 }

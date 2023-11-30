@@ -1,7 +1,9 @@
+#include "settings.h"
+
+#include <ServoEasing.h>
+
 #include "ear.h"
 
-Ear::Ear(Adafruit_PWMServoDriver *driver, uint8_t driverPosition)
+Ear::Ear(uint8_t driverPin) : driverPin(driverPin)
 {
-    this->driver = driver;
-    this->driverPosition = driverPosition;
 }

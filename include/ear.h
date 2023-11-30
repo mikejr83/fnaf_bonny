@@ -1,11 +1,14 @@
 #pragma once
 
-#include <Adafruit_PWMServoDriver.h>
+#include <ServoEasing.h>
+
+#include "mover.h"
+
 class Ear
 {
 private:
-    Adafruit_PWMServoDriver *driver;
-    uint8_t driverPosition;
+    ServoEasing *driver;
+    uint8_t driverPin;
 public:
-    Ear(Adafruit_PWMServoDriver *driver, uint8_t driverPosition);
+    Ear(uint8_t driverPin);
 };
