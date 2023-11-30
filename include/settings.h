@@ -11,6 +11,7 @@
 #define USMAX 2200    // This is the rounded 'maximum' microsecond length based on the maximum pulse of 600
 #define SERVO_FREQ 90 // Analog servos run at ~50 Hz updates
 
+
 #define LOG_LEVEL LOG_LEVEL_TRACE
 // #define LOG_LEVEL LOG_LEVEL_VERBOSE
 // #define DISABLE_LOGGING 
