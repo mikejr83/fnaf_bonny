@@ -2,6 +2,8 @@
 
 #include <ArduinoLog.h>
 
+#define USE_PCA9685_SERVO_EXPANDER
+
 #define THREAD_INTERVAL 1000
 
 #define OSCILLATOR_FREQUENCY 25200000
@@ -12,6 +14,6 @@
 #define SERVO_FREQ 90 // Analog servos run at ~50 Hz updates
 
 
-#define LOG_LEVEL LOG_LEVEL_TRACE
-// #define LOG_LEVEL LOG_LEVEL_VERBOSE
+// #define LOG_LEVEL LOG_LEVEL_TRACE
+#define LOG_LEVEL LOG_LEVEL_VERBOSE
 // #define DISABLE_LOGGING 
