@@ -9,39 +9,61 @@
 #include <Adafruit_PWMServoDriver.h>
 #include <ServoEasing.hpp>
 
-void MovementReachedHandler(ServoEasing *aServoEasingInstance);
+void (*resetFunc)(void) = 0;
 
 class Eye
 {
+private:
+  int lookLeftPosition,
+      lookRightPosition,
+      upperClosedPosition,
+      upperOpenPosition,
+      lowerClosedPosition,
+      lowerOpenPosition;
+
 public:
   ServoEasing *pitch;
   ServoEasing *yaw;
   ServoEasing *upper;
   ServoEasing *lower;
 
-  Eye(ServoEasing *driver, int pitchPin, int yawPin, int upperPin, int lowerPin)
+  Eye(int pitchPin,
+      int yawPin,
+      int upperPin,
+      int lowerPin,
+      int lookLeftPosition,
+      int lookRightPosition,
+      int upperClosedPosition,
+      int upperOpenPosition,
+      int lowerClosedPosition,
+      int lowerOpenPosition) : lookLeftPosition(lookLeftPosition),
+                               lookRightPosition(lookRightPosition),
+                               upperClosedPosition(upperClosedPosition),
+                               upperOpenPosition(upperOpenPosition),
+                               lowerClosedPosition(lowerClosedPosition),
+                               lowerOpenPosition(lowerOpenPosition)
   {
-    uint8_t position = driver->attach(pitchPin, 1500);
-    Log.infoln("Pitch %d", position);
-    pitch = ServoEasing::ServoEasingArray[position];
+    pitch = new ServoEasing(PCA9685_DEFAULT_ADDRESS);
+    pitch->InitializeAndCheckI2CConnection(&Serial);
+    pitch->attach(pitchPin, 1600);
     pitch->setMaxConstraint(2200);
     pitch->setMinConstraint(800);
 
-    position = driver->attach(yawPin, 1500);
-    Log.infoln("Yaw %d", position);
-    yaw = ServoEasing::ServoEasingArray[position];
+    yaw = new ServoEasing(PCA9685_DEFAULT_ADDRESS);
+    yaw->InitializeAndCheckI2CConnection(&Serial);
+    yaw->attach(yawPin, 1600);
     yaw->setMaxConstraint(2200);
     yaw->setMinConstraint(800);
 
-    position = driver->attach(upperPin, 1500);
-    Log.infoln("Upper %d", position);
-    upper = ServoEasing::ServoEasingArray[position];
+    upper = new ServoEasing(PCA9685_DEFAULT_ADDRESS);
+    upper->InitializeAndCheckI2CConnection(&Serial);
+    upper->attach(upperPin, upperClosedPosition);
     upper->setMaxConstraint(2200);
     upper->setMinConstraint(800);
 
-    position = driver->attach(lowerPin, 1500);
-    Log.infoln("Lower %d", position);
-    lower = ServoEasing::ServoEasingArray[position];
+    lower = new ServoEasing(PCA9685_DEFAULT_ADDRESS);
+    lower->InitializeAndCheckI2CConnection(&Serial);
+    lower->attach(lowerPin, lowerClosedPosition);
     lower->setMaxConstraint(2200);
     lower->setMinConstraint(800);
   }
@@ -54,32 +76,76 @@ public:
     delete lower;
   }
 
-  bool closeEyes()
+  void closeEyes()
   {
     Log.verboseln("closeEyes()");
 
-    Log.infoln("lower %X", &lower);
-    Log.infoln("upper %X", &upper);
+    Log.traceln("Lower to: %d - Upper to %d", lowerClosedPosition, upperClosedPosition);
 
-    lower->print(&Serial, false);
-    upper->print(&Serial, false);
+    lower->startEaseTo(lowerClosedPosition, 50);
+    upper->startEaseTo(upperClosedPosition, 50);
+  }
 
-    lower->startEaseTo(2200, 50);
-    lower->startEaseTo(2200, 50, DO_NOT_START_UPDATE_BY_INTERRUPT);
-    upper->startEaseTo(2200, 50);
-    upper->startEaseTo(2200, 50, DO_NOT_START_UPDATE_BY_INTERRUPT);
+  void openEyes()
+  {
+    Log.verboseln("openEyes()");
 
-    lower->print(&Serial, false);
-    upper->print(&Serial, false);
+    Log.traceln("Lower to: %d - Upper to %d", lowerOpenPosition, upperOpenPosition);
 
-    return false;
+    lower->startEaseTo(lowerOpenPosition, 75);
+    upper->startEaseTo(upperOpenPosition, 75);
+  }
+
+  bool lookLeft()
+  {
+    Log.verboseln("lookLeft()");
+    pitch->startEaseTo(lookLeftPosition, 30);
+  }
+
+  bool lookRight()
+  {
+    Log.verboseln("lookRight()");
+    pitch->startEaseTo(lookRightPosition, 30);
+  }
+
+  bool lookAhead()
+  {
+    Log.verboseln("lookAhead()");
+    pitch->startEaseTo(1500, 30);
+    yaw->startEaseTo(1500, 30);
   }
 };
 
-ServoEasing servoEasing(PCA9685_DEFAULT_ADDRESS);
-
 Eye *left;
 Eye *right;
+uint32_t cycle = 0;
+
+void initializeEyes()
+{
+  right = new Eye(4,
+                  5,
+                  6,
+                  7,
+                  1100,
+                  1800,
+                  UPPER_R_CLOSED,
+                  UPPER_R_OPENED,
+                  LOWER_R_CLOSED,
+                  LOWER_R_OPENED);
+  left = new Eye(0,
+                 1,
+                 2,
+                 3,
+                 1000,
+                 2000,
+                 UPPER_L_CLOSED,
+                 UPPER_L_OPENED,
+                 LOWER_L_CLOSED,
+                 LOWER_L_OPENED);
+
+  setSpeedForAllServos(80);
+  setEasingTypeForAllServos(EASE_CUBIC_OUT);
+}
 
 void setup()
 {
@@ -89,39 +155,59 @@ void setup()
   Log.begin(LOG_LEVEL, &Serial);
 #endif
 
-  if (servoEasing.InitializeAndCheckI2CConnection(&Serial))
-  {
-  }
+  initializeEyes();
 
-  
-  right = new Eye(&servoEasing, 4, 5, 6, 7);
-  left = new Eye(&servoEasing, 0, 1, 2, 3);
+  updateAndWaitForAllServosToStop();
 
-  setSpeedForAllServos(80);
-  setEasingTypeForAllServos(EASE_CUBIC_OUT);
+  Log.infoln("Done initializing eyes");
 
   delay(4000);
-
-  // servoEasing.setTargetPositionReachedHandler(MovementReachedHandler);
-  // left->closeEyes();
 }
 
 void loop()
 {
+
+  Log.infoln("opening eyes");
+  left->openEyes();
+  right->openEyes();
+
+  updateAndWaitForAllServosToStop();
+  Log.infoln("done opening eyes");
+
+  delay(4000);
+
+  cycle++;
+  Log.infoln("Starting cycle %d", cycle);
+
+  delay(1000);
+  Log.infoln("look left");
+  left->lookLeft();
+  right->lookLeft();
+
+  updateAndWaitForAllServosToStop();
+
+  delay(1000);
+
+  Log.infoln("look right");
+  left->lookRight();
+  right->lookRight();
+
+  updateAndWaitForAllServosToStop();
+
+  delay(1000);
+
+  Log.infoln("look ahead");
+  left->lookAhead();
+  right->lookAhead();
+
+  updateAndWaitForAllServosToStop();
+
+  delay(1000);
+  Log.infoln("closing eyes");
   left->closeEyes();
+  right->closeEyes();
 
-  do {
-    Log.infoln("hi");
-        // here you can call your own program
-        delay(REFRESH_INTERVAL_MILLIS); // optional 20ms delay
-    } while (!updateAllServos());
-  
-  delay(2000);
-}
+  updateAndWaitForAllServosToStop();
 
-void MovementReachedHandler(ServoEasing *aServoEasingInstance)
-{
-  Log.infoln("hi");
-  // aServoEasingInstance->startEaseTo(1000);
-  aServoEasingInstance->print(&Serial, false);
+  delay(100);
 }
