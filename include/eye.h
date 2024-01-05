@@ -3,9 +3,13 @@
 #include <ArduinoLog.h>
 #include <ServoEasing.h>
 
+#ifndef _EYE_H
+#define _EYE_H
+
 class Eye
 {
 private:
+    const char *name;
     int lookLeftPosition,
         lookRightPosition,
         upperClosedPosition,
@@ -19,7 +23,8 @@ public:
     ServoEasing *upper;
     ServoEasing *lower;
 
-    Eye(int pitchPin,
+    Eye(const char *name,
+        int pitchPin,
         int yawPin,
         int upperPin,
         int lowerPin,
@@ -43,3 +48,5 @@ public:
 
     void lookAhead();
 };
+
+#endif

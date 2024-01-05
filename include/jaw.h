@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef _JAW_H
+#define _JAW_H
+
 #include <ArduinoLog.h>
 #include <ServoEasing.h>
 
@@ -16,3 +19,4 @@ public:
     void openJaw();
     void closeJaw();
 };
+#endif
